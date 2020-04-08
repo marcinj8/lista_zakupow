@@ -3,6 +3,7 @@ import axios from 'axios';
 
 import NavigationPurchaseList from './NavigationPurchaseList';
 import PurchaseLists from './PurchaseLists';
+import AddItem from './PurchaseListCreator/AddItem';
 
 const cors = 'https://cors-anywhere.herokuapp.com/';
 const firebaseAddress = 'https://zakupy-aab3c.firebaseio.com/';
@@ -13,6 +14,15 @@ class PurchaseListContainer extends Component {
         purchaseLists: null,
         loading: false,
         error: false,
+        showItemEditor: false,
+        editedItemData: null,
+        editedItemId: null,
+        showListEditor: false,
+        autoSyncConfig: {
+            sync: false,
+            time: 90000,
+            lastSync: 0
+        }
     }
 
     componentDidMount() {
@@ -23,6 +33,7 @@ class PurchaseListContainer extends Component {
         if (!this.props.isAppUpdated && !this.state.loading && this.state.purchaseLists !== null) {
             this.setPurchaseList();
         }
+        // automatyczna synchronizacja -- this.state.autosyncConfig
     }
 
     setLadingToTrue() {
@@ -58,7 +69,6 @@ class PurchaseListContainer extends Component {
     }
 
     errorHandler = error => {
-        console.log(error)
         this.setState({
             error: true,
             loading: false
@@ -72,33 +82,93 @@ class PurchaseListContainer extends Component {
     }
 
     setPurchaseList = () => {
-        this.setLadingToTrue();
+        if (this.state.purchaseLists === null) {
+            this.setLadingToTrue();
+        }
         this.getData();
     }
 
-    pushDataOnServer = (item, itemId) => {
-        const listName = this.props.currentList;
-        const link = firebaseAddress + this.props.currentList +'/items/' + itemId
-        console.log(item, link)
-        // axios.put() dodać połączenie przed czy po setstate
-    }
-
-    changePurchaseStatusHandler = itemId => {
-        console.log(itemId)
-        const purchaseListsUpdated = { ...this.state.purchaseLists };
-        const currentItem = { ...purchaseListsUpdated[this.props.currentList].items[itemId] };
-
-        currentItem.purchased = !purchaseListsUpdated[this.props.currentList].items[itemId].purchased;
-        purchaseListsUpdated[this.props.currentList].items[itemId] = currentItem;
-        // axios.put()
-        this.pushDataOnServer(currentItem, itemId)
+    changeItemPurchasedStatus = purchaseListsUpdated => {
+        console.log('updated')
         this.setState({
             purchaseLists: purchaseListsUpdated
         })
     }
 
-    render() {
+    pushDataOnServer = (item, itemId, purchaseListsUpdated) => {
+        const listName = this.props.currentList;
+        const link = cors + firebaseAddress + listName + '/items/' + itemId + '.json'
+        console.log(item, link)
+        axios.put(link, { ...item })
+            .then(this.changeItemPurchasedStatus(purchaseListsUpdated))
+            .catch(err => console.log(err))
 
+    }
+
+    editorTogglerHandler = (itemId) => {
+        const editedItem = { ...this.state.purchaseLists[this.props.currentList].items[itemId] };
+        this.setState({
+            editedItemData: editedItem,
+            editedItemId: itemId
+        })
+        if (this.state.showItemEditor && itemId === this.state.editedItemId) {
+            this.setState({
+                showItemEditor: false
+            })
+        } else {
+            this.setState({
+                showItemEditor: true
+            })
+        }
+    }
+
+    changePurchaseStatusHandler = itemId => {
+        const purchaseListsUpdated = { ...this.state.purchaseLists };
+        const currentItem = { ...purchaseListsUpdated[this.props.currentList].items[itemId] };
+        currentItem.purchased = !purchaseListsUpdated[this.props.currentList].items[itemId].purchased;
+        purchaseListsUpdated[this.props.currentList].items[itemId] = currentItem;
+        this.pushDataOnServer(currentItem, itemId, purchaseListsUpdated)
+
+    }
+
+    deleteItemFromPurchaseListHandler = itemId => {
+        const listName = this.props.currentList;
+        const link = cors + firebaseAddress + listName + '/items/' + itemId + '.json'
+        axios.delete(link)
+            .then(res => this.props.changeDataStatus('isAppUpdated', false))
+            .catch(err => console.log(err))
+
+    }
+
+    editedItemInputChangeHandler = e => {
+        const eventTarget = e.target;
+        const editedItemUpdated = {...this.state.editedItemData};
+        editedItemUpdated[eventTarget.placeholder] = eventTarget.value;
+        this.setState({
+            editedItemData: editedItemUpdated
+        })
+    }
+
+    editedItemChangeVisibilityHandler = e => {
+        console.log(e.target.checked);
+        const editedItemUpdated = {...this.state.editedItemData};
+        editedItemUpdated.isVisibleOnMainList = e.target.checked;
+        this.setState({
+            editedItemData: editedItemUpdated
+        })
+    }
+
+    acceptChanges = () => {
+        const purchaseListsUpdated = {...this.state.purchaseLists};
+        console.log(purchaseListsUpdated, this.state.editedItemId)
+        purchaseListsUpdated[this.props.currentList].items[this.state.editedItemId] = {...this.state.editedItemData};
+        this.pushDataOnServer(this.state.editedItemData, this.state.editedItemId, purchaseListsUpdated);
+        this.setState({
+            showItemEditor: false
+        })
+    }
+
+    render() {
         let purchaseListNavigation = 'Proszę poczekaj';
         let lists = <div className='purchaseList__loadingContainer'>trwa ładowanie</div>;
         let buttons = null;
@@ -113,7 +183,9 @@ class PurchaseListContainer extends Component {
                 );
                 lists = (
                     <PurchaseLists
+                        editorToggler={this.editorTogglerHandler}
                         changePurchaseStatus={this.changePurchaseStatusHandler}
+                        onItemDelete={this.deleteItemFromPurchaseListHandler}
                         currentList={this.props.currentList}
                         purchaseLists={this.state.purchaseLists}
                     />
@@ -129,12 +201,27 @@ class PurchaseListContainer extends Component {
                 lists = 'informacja o błędzie';
             }
         }
-
+        console.log(this.state)
         return (
             <div className='PurchaseList__container'>
                 {purchaseListNavigation}
                 {lists}
                 {buttons}
+                <div>
+                    {
+                        this.state.showItemEditor
+                            ? <AddItem
+                                nameValue={this.state.editedItemData.nazwa}
+                                quantityValue={this.state.editedItemData.ile}
+                                noteValue={this.state.editedItemData.notatka}
+                                checkBoxSelected={this.state.editedItemData.isVisibleOnMainList}
+                                inputChanged={this.editedItemInputChangeHandler}
+                                addItem={this.acceptChanges}
+                                onChangeVisibility={this.editedItemChangeVisibilityHandler}
+                                button='Popraw' />
+                            : null
+                    }
+                </div>
             </div>
         )
     };

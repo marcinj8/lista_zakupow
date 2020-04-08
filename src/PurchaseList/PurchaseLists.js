@@ -11,6 +11,8 @@ const PurchaseLists = props => {
             }
             return (
                 <PurchaseList
+                    editorToggler={props.editorToggler}
+                    onItemDelete={props.onItemDelete}
                     changePurchaseStatus={props.changePurchaseStatus}
                     key={list} purchaseList={props.purchaseLists[list]}
                 />

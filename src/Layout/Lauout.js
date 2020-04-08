@@ -21,7 +21,6 @@ class Layout extends Component {
     }
 
     setCurrentListHandler = listName => {
-        // console.log(listName.target.value)
         if (this.state.currentList === listName) {
             return
         }

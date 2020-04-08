@@ -1,19 +1,18 @@
 import React from 'react';
 
 const ListItem = props => {
-    console.log(props.item.purchased)
 
     const itemStyle = {
-        'color:' : props.item.purchased ? 'green' : 'auto'
+        'color' : props.item.purchased ? 'green' : 'auto'
     }
     return (
         <div className={itemStyle}>
             <span>{props.item.nazwa}</span>
             <span>{props.item.ile}</span>
             <span>{props.item.notatka}</span>
-            <button >edytuj</button>
-            <button onClick={props.changePurchaseStatus}>kupione/do kupienia</button>
-            <button>skasuj</button>
+            <button onClick={props.editorToggler}>edytuj</button>
+            <button onClick={props.changePurchaseStatus}>{props.item.purchased ? 'do kupienia' : 'kupione' }</button>
+            <button onClick={props.onItemDelete}>skasuj</button>
         </div>
     )
 }

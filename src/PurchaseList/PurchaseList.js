@@ -9,8 +9,10 @@ const PurchaseList = props => {
     const purchaseList = Object.keys(props.purchaseList.items).map(
         item => (
             <ListItem
-                changePurchaseStatus={() => props.changePurchaseStatus(item)}
                 key={item}
+                changePurchaseStatus={() => props.changePurchaseStatus(item)}
+                editorToggler={() => props.editorToggler(item)}
+                onItemDelete={() => props.onItemDelete(item)}
                 item={{ ...props.purchaseList.items[item] }}
             />
         )

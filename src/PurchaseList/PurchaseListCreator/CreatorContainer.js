@@ -18,13 +18,14 @@ class CreatorContainer extends React.Component {
             ile: '',
             notatka: '',
             purchased: false,
-            alreadyOnList: false
+            alreadyOnList: false,
+            isVisibleOnMainList: true
         },
         newList: {
             name: '',
             disabled: false,
             author: false,
-        },
+        }
     }
 
     showAddFormHandler = containerName => {
@@ -79,6 +80,15 @@ class CreatorContainer extends React.Component {
             .catch(err => console.log(err))
     }
 
+    changeVisibilityHandler = e => {
+        console.log(e.target.checked);
+        const newItemUpdated = {...this.state.newItem};
+        newItemUpdated.isVisibleOnMainList = e.target.checked;
+        this.setState({
+            newItem: newItemUpdated
+        })
+    }
+
     newListNameHandler = e => {
         const eventTarget = e.target;
         let newListUpdated = this.state.newList;
@@ -113,8 +123,10 @@ class CreatorContainer extends React.Component {
                             nameValue={this.state.newItem.nazwa}
                             quantityValue={this.state.newItem.ile}
                             noteValue={this.state.newItem.notatka}
+                            checkBoxSelected={this.state.newItem.isVisibleOnMainList}
                             inputChanged={this.inputChangeHandler}
                             addItem={this.addItemHandler}
+                            onChangeVisibility={this.changeVisibilityHandler}
                         />
                         : null
                 }
@@ -127,7 +139,6 @@ class CreatorContainer extends React.Component {
                         />
                         : null
                 }
-
             </div>
         )
     }
